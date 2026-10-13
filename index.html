@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="theme-color" content="#0a0a12">
+<title>Vantorium Sorgu</title>
+<style>
+  :root {
+    --bg:#0a0a12; --border:rgba(140,100,255,0.28); --border-hi:rgba(160,120,255,0.55);
+    --accent:#a78bfa; --accent2:#f472b6; --accent3:#22d3ee;
+    --text:#ececff; --text-dim:#9a9ac0; --text-mute:#6b6b90;
+    --ok:#34d399; --err:#f87171; --warn:#fbbf24;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overscroll-behavior:none; }
+  body {
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background: url('arkaplan.jpg') center/cover fixed no-repeat, var(--bg);
+    color:var(--text); overflow:hidden; font-size:15px; line-height:1.5;
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(124,58,237,0.25), transparent 45%),
+      radial-gradient(circle at 85% 90%, rgba(236,72,153,0.22), transparent 45%),
+      rgba(5,5,15,0.68);
+    z-index:-1; pointer-events:none;
+  }
+  .topbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; background:rgba(12,12,26,0.55);
+    border-bottom:1px solid var(--border);
+    backdrop-filter: blur(18px) saturate(180%);
+    position:fixed; top:0; left:0; right:0; z-index:50; height:64px;
+  }
+  .logo {
+    font-weight:800; font-size:18px; letter-spacing:2px;
+    background:linear-gradient(135deg,#a78bfa,#f472b6);
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent;
+    display:flex; align-items:center; gap:6px;
+  }
+  .logo .dot { width:8px; height:8px; border-radius:50%; background:var(--accent3); box-shadow:0 0 10px var(--accent3); animation:pulseDot 2s infinite; }
+  @keyframes pulseDot { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .dots {
+    cursor:pointer; width:44px; height:44px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:14px; font-size:22px; user-select:none;
+    background:linear-gradient(135deg, rgba(124,58,237,0.22), rgba(236,72,153,0.18));
+    border:1px solid var(--border); transition:.15s; color:var(--accent); line-height:1;
+  }
+  .dots:active { transform:scale(0.9); }
+  .empty-home {
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:16px; color:var(--text-mute); font-size:13px;
+    padding:80px 20px 40px; text-align:center; user-select:none; pointer-events:none;
+  }
+  .empty-home .big { font-size:72px; opacity:.12; font-weight:300; color:var(--accent); }
+  .empty-home .txt { letter-spacing:1px; text-transform:uppercase; font-size:11px; }
+  .sound-btn {
+    position:fixed; bottom:24px; right:24px; width:54px; height:54px; border-radius:18px;
+    background:linear-gradient(135deg,#7c3aed,#ec4899); border:none; color:#fff; font-size:22px;
+    cursor:pointer; z-index:80; box-shadow:0 10px 30px rgba(236,72,153,0.45);
+    display:flex; align-items:center; justify-content:center;
+    transition:.15s; animation:pulseSound 2.5s ease-in-out infinite;
+  }
+  .sound-btn:active { transform:scale(0.9); }
+  .sound-btn.playing { animation:none; opacity:0.35; }
+  @keyframes pulseSound {
+    0%,100% { box-shadow:0 10px 30px rgba(236,72,153,0.45), 0 0 0 0 rgba(236,72,153,0.5); }
+    50% { box-shadow:0 10px 30px rgba(236,72,153,0.6), 0 0 0 12px rgba(236,72,153,0); }
+  }
+  .drawer-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); backdrop-filter: blur(3px); z-index:90; animation:fadeIn .22s ease; }
+  .drawer-overlay.open { display:block; }
+  @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+  .drawer {
+    position:fixed; top:0; left:0; bottom:0; width:310px; max-width:86%;
+    background:linear-gradient(180deg,#0e0e1e 0%,#14142a 60%,#0f0f20 100%);
+    border-right:1px solid var(--border); z-index:95;
+    transform:translateX(-100%); transition:transform .32s cubic-bezier(.22,1,.36,1);
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    padding-bottom:24px; box-shadow:12px 0 40px rgba(0,0,0,0.5);
+  }
+  .drawer.open { transform:translateX(0); }
+  .drawer::-webkit-scrollbar { width:4px; }
+  .drawer::-webkit-scrollbar-thumb { background:var(--border-hi); border-radius:4px; }
+  .drawer-head {
+    padding:20px 20px 16px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:10px;
+    position:sticky; top:0; background:rgba(14,14,30,0.95);
+    backdrop-filter: blur(10px); z-index:2;
+  }
+  .drawer-head .logo { font-size:16px; }
+  .drawer-head .close {
+    margin-left:auto; cursor:pointer; color:var(--text-dim);
+    font-size:20px; width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:10px; transition:.15s;
+  }
+  .drawer-head .close:active { background:rgba(120,80,255,0.2); }
+  .menu-label {
+    padding:18px 22px 8px; font-size:10.5px; letter-spacing:2.4px;
+    color:var(--text-mute); font-weight:700; text-transform:uppercase;
+  }
+  .menu-item {
+    display:flex; align-items:center; gap:14px; padding:13px 22px;
+    cursor:pointer; font-size:14.5px; color:#d8d8f0;
+    transition:.16s; border-left:3px solid transparent; user-select:none;
+  }
+  .menu-item:hover, .menu-item:active {
+    background:linear-gradient(90deg, rgba(124,58,237,0.18), transparent);
+    border-left-color:var(--accent); color:#fff;
+  }
+  .menu-item .ico {
+    width:24px; height:24px; text-align:center; font-size:15px; color:var(--accent);
+    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    border-radius:8px; background:rgba(124,58,237,0.12);
+  }
+  .menu-item.danger { color:var(--err); }
+  .menu-item.danger .ico { color:var(--err); background:rgba(248,113,113,0.12); }
+  .badge {
+    margin-left:auto; font-size:9px; font-weight:800;
+    padding:4px 8px; border-radius:6px;
+    background:linear-gradient(135deg, rgba(251,191,36,0.22), rgba(251,191,36,0.1));
+    color:var(--warn); border:1px solid rgba(251,191,36,0.45); letter-spacing:0.8px;
+  }
+  .menu-item.locked { opacity:.4; }
+  .menu-divider { height:1px; margin:8px 22px; background:linear-gradient(90deg, transparent, var(--border), transparent); }
+  .modal-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.78); backdrop-filter: blur(8px);
+    z-index:200; align-items:center; justify-content:center;
+    padding:18px; animation:fadeIn .22s ease;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:linear-gradient(180deg, rgba(28,28,54,0.98), rgba(18,18,36,0.98));
+    border:1px solid var(--border); border-radius:22px; padding:26px;
+    width:100%; max-width:440px; max-height:92vh; overflow-y:auto;
+    box-shadow:0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(124,58,237,0.15);
+    animation:modalIn .3s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes modalIn { from{opacity:0;transform:translateY(20px) scale(0.96);} to{opacity:1;transform:translateY(0) scale(1);} }
+  .modal h3 { color:var(--text); margin-bottom:22px; text-align:center; font-size:18px; font-weight:700; }
+  .modal h3 .hl {
+    background:linear-gradient(135deg,#a78bfa,#f472b6);
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  input, select {
+    width:100%; background:rgba(10,10,24,0.7);
+    border:1px solid var(--border); border-radius:14px;
+    padding:14px 16px; color:var(--text); font-size:15px;
+    outline:none; transition:.2s; margin-bottom:12px;
+    font-family:inherit; -webkit-appearance:none;
+  }
+  input::placeholder { color:var(--text-mute); }
+  input:focus, select:focus {
+    border-color:var(--accent); background:rgba(15,15,32,0.9);
+    box-shadow:0 0 0 4px rgba(124,58,237,0.18);
+  }
+  button.primary {
+    background:linear-gradient(135deg,#7c3aed 0%,#ec4899 100%);
+    border:none; color:#fff; padding:14px 24px;
+    border-radius:14px; cursor:pointer; font-weight:700;
+    font-size:15px; transition:.15s;
+    white-space:nowrap; width:100%; font-family:inherit;
+    box-shadow:0 8px 24px rgba(124,58,237,0.35);
+  }
+  button.primary:active { transform:scale(0.97); }
+  button.primary:disabled { opacity:.5; cursor:wait; }
+  .btn-secondary {
+    background:rgba(255,255,255,0.06); border:1px solid var(--border);
+    color:var(--text); padding:13px 24px; border-radius:14px;
+    cursor:pointer; font-weight:600; font-size:14.5px;
+    transition:.15s; width:100%; margin-top:10px; font-family:inherit;
+  }
+  .btn-secondary:active { transform:scale(0.97); }
+  .btn-green { background:linear-gradient(135deg,#22ff88,#0ea5e9); color:#001a10; }
+  .btn-red { background:linear-gradient(135deg,rgba(220,38,38,0.9),rgba(127,29,29,0.95)); border-color:rgba(248,113,113,0.5); color:#fff; }
+  .modal .switch { text-align:center; margin-top:16px; font-size:13px; color:var(--text-dim); }
+  .modal .switch span { color:var(--accent); cursor:pointer; font-weight:600; }
+  .query-modal { max-width:540px; padding:22px; }
+  .query-modal .qhead { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+  .query-modal .qhead .qico {
+    width:46px; height:46px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#7c3aed,#ec4899); border-radius:14px;
+    font-size:22px; box-shadow:0 8px 20px rgba(124,58,237,0.4); flex-shrink:0;
+  }
+  .query-modal .qhead h3 { margin:0; text-align:left; font-size:17px; color:#fff; font-weight:700; }
+  .query-modal .qhead .qsub { font-size:12px; color:var(--text-dim); margin-top:3px; font-weight:400; }
+  .query-modal .qclose {
+    margin-left:auto; cursor:pointer; color:var(--text-dim);
+    font-size:18px; width:36px; height:36px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:10px; transition:.15s; flex-shrink:0;
+  }
+  .q-status { color:var(--accent); font-size:12.5px; margin-top:10px; text-align:center; min-height:18px; font-weight:500; }
+  .q-result {
+    background:rgba(5,5,15,0.85); border:1px solid var(--border);
+    border-radius:14px; padding:16px; margin-top:12px;
+    min-height:100px; max-height:500px; overflow:auto;
+    white-space:pre-wrap; font-family:'Consolas','Monaco',monospace;
+    font-size:12px; line-height:1.6; word-break:break-word;
+    display:none; color:#d0ffe0;
+  }
+  .q-result.show { display:block; }
+  .error { color:var(--err); }
+  .terminal {
+    background:linear-gradient(180deg,#000 0%,#0a0a0a 100%);
+    color:#22ff88; font-family:'Consolas','Monaco',monospace;
+    border:1px solid rgba(34,255,136,0.35); border-radius:14px;
+    padding:16px; height:300px; overflow-y:auto;
+    font-size:12.5px; margin-bottom:12px; line-height:1.6;
+  }
+  .terminal input {
+    background:#000; color:#22ff88; border:1px solid rgba(34,255,136,0.5);
+    font-family:'Consolas',monospace; margin:0;
+  }
+  .ipinfo { font-size:13px; color:#c8c8e0; line-height:1.9; margin-bottom:16px; }
+  .ipinfo b { color:var(--accent); }
+  .hidden { display:none !important; }
+  .toast {
+    position:fixed; bottom:90px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:linear-gradient(135deg, rgba(124,58,237,0.95), rgba(236,72,153,0.9));
+    color:#fff; padding:12px 22px; border-radius:14px;
+    font-size:13.5px; font-weight:600; z-index:300; opacity:0;
+    transition:.3s; box-shadow:0 12px 32px rgba(124,58,237,0.5);
+    max-width:90%; text-align:center; pointer-events:none;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .plk-card {
+    background:rgba(10,10,25,0.9);
+    border:1px solid rgba(34,211,238,0.35);
+    border-left:3px solid var(--accent3);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-bottom:10px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .plk-row { display:flex; gap:8px; align-items:center; }
+  .plk-row .lbl { color:#9a9ac0; font-size:11px; min-width:95px; }
+  .plk-row .val { color:#fff; font-weight:600; }
+  .plk-row .val.plaka {
+    color:var(--accent3); font-weight:800;
+    font-family:'Consolas',monospace;
+    letter-spacing:1.5px; font-size:14px;
+  }
+  .ip-kart {
+    background:rgba(10,10,25,0.9);
+    border:1px solid rgba(34,211,238,0.35);
+    border-left:3px solid var(--accent3);
+    border-radius:10px;
+    padding:14px; margin-bottom:10px;
+  }
+  .ip-row { display:flex; gap:10px; margin-bottom:6px; font-size:12.5px; }
+  .ip-row .lbl { color:#9a9ac0; min-width:110px; }
+  .ip-row .val { color:#fff; font-weight:600; word-break:break-all; }
+
+  /* IP BAN EKRANI */
+  .ban-screen {
+    display:none;
+    position:fixed; inset:0;
+    background:#000;
+    z-index:99999;
+    align-items:center; justify-content:center;
+    flex-direction:column;
+    text-align:center;
+    padding:30px;
+  }
+  .ban-screen.show { display:flex; }
+  .ban-screen::before {
+    content:'';
+    position:absolute; inset:0;
+    background:
+      repeating-linear-gradient(0deg, transparent 0, transparent 2px, rgba(255,0,0,0.05) 2px, rgba(255,0,0,0.05) 3px),
+      radial-gradient(circle at 50% 50%, rgba(255,0,0,0.15), transparent 70%);
+    pointer-events:none;
+    animation:scanline 8s linear infinite;
+  }
+  @keyframes scanline {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100px; }
+  }
+  .ban-content { position:relative; z-index:2; max-width:600px; }
+  .ban-icon {
+    font-size:100px; margin-bottom:20px;
+    filter:drop-shadow(0 0 30px #ff0033);
+    animation:banPulse 2s infinite;
+  }
+  @keyframes banPulse {
+    0%,100% { transform:scale(1); filter:drop-shadow(0 0 30px #ff0033); }
+    50% { transform:scale(1.08); filter:drop-shadow(0 0 60px #ff0033); }
+  }
+  .ban-title {
+    font-size:38px; font-weight:900;
+    letter-spacing:3px; color:#ff0033;
+    text-transform:uppercase; margin-bottom:16px;
+    text-shadow:0 0 20px #ff0033, 0 0 40px #ff0033;
+    animation:titleGlitch 3s infinite;
+  }
+  @keyframes titleGlitch {
+    0%,90%,100% { transform:translate(0); }
+    92% { transform:translate(-3px, 2px); }
+    94% { transform:translate(3px, -2px); }
+    96% { transform:translate(-2px, -2px); }
+  }
+  .ban-sub {
+    font-size:15px; color:#a78bfa;
+    letter-spacing:2px; margin-bottom:8px;
+    font-family:'Consolas',monospace;
+  }
+  .ban-info {
+    font-size:13px; color:#6b6b90;
+    margin-bottom:24px;
+    font-family:'Consolas',monospace;
+    line-height:1.8;
+  }
+  .ban-line {
+    width:80px; height:2px;
+    background:linear-gradient(90deg, transparent, #ff0033, transparent);
+    margin:20px auto;
+  }
+  .ban-footer {
+    font-size:12px; color:#ff0033;
+    letter-spacing:3px; font-weight:700;
+    text-transform:uppercase;
+  }
+  .ban-footer span { color:#a78bfa; }
+</style>
+</head>
+<body>
+
+<!-- IP BAN EKRANI -->
+<div class="ban-screen" id="banScreen">
+  <div class="ban-content">
+    <div class="ban-icon">🚫</div>
+    <div class="ban-title">You've been IP banned!</div>
+    <div class="ban-line"></div>
+    <div class="ban-sub">ACCESS DENIED</div>
+    <div class="ban-info" id="banInfo">
+      IP adresiniz kara listeye alınmıştır.<br>
+      Bu siteye bir daha erişemezsiniz.
+    </div>
+    <div class="ban-footer">— by <span>vantorium team</span> —</div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div class="dots" id="dotsBtn">⋮</div>
+  <div class="logo"><span class="dot"></span>VANTORIUM</div>
+  <div style="width:44px;"></div>
+</div>
+
+<div class="empty-home">
+  <div class="big">⋮</div>
+  <div class="txt">Başlamak için sol üstteki menüyü aç</div>
+</div>
+
+<button class="sound-btn" id="soundBtn">🔊</button>
+
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="logo"><span class="dot"></span>VANTORIUM</div>
+    <div class="close" id="drawerClose">✕</div>
+  </div>
+
+  <div id="guestMenu">
+    <div class="menu-label">Sistem</div>
+    <div class="menu-item" id="drawerLogin"><div class="ico">🔑</div> Giriş Yap</div>
+    <div class="menu-item" id="drawerRegister"><div class="ico">📝</div> Kaydol</div>
+  </div>
+
+  <div id="memberMenu" class="hidden">
+    <div class="menu-label">Sorgu İşlemleri</div>
+    <div class="menu-item" data-q="tc"><div class="ico">🔎</div> TC Sorgulama</div>
+    <div class="menu-item" data-q="tcpro"><div class="ico">⭐</div> TC Pro Sorgulama <span class="badge">PREMIUM</span></div>
+    <div class="menu-item" data-q="adsoyad"><div class="ico">👤</div> Ad Soyad Sorgulama</div>
+    <div class="menu-item" data-q="aile"><div class="ico">👨‍👩‍👧</div> Aile Sorgulama</div>
+    <div class="menu-item" data-q="sulale"><div class="ico">🌳</div> Sülale Sorgulama</div>
+    <div class="menu-item" data-q="tapu"><div class="ico">🏠</div> Tapu Sorgulama <span class="badge">PREMIUM</span></div>
+    <div class="menu-item" data-q="adaparsel"><div class="ico">🗺️</div> Ada Parsel Sorgulama <span class="badge">PREMIUM</span></div>
+    <div class="menu-item" data-q="plaka"><div class="ico">🚗</div> Plaka → Ad Soyad <span class="badge">PREMIUM</span></div>
+    <div class="menu-item" data-q="adsoyad2"><div class="ico">👤</div> Ad Soyad → Plaka <span class="badge">PREMIUM</span></div>
+    <div class="menu-item" data-q="iban"><div class="ico">💳</div> IBAN Sorgulama <span class="badge">PREMIUM</span></div>
+    <div class="menu-item" data-q="ipsorgu"><div class="ico">🌐</div> IP Sorgulama <span class="badge">PREMIUM</span></div>
+
+    <div class="menu-divider"></div>
+    <div class="menu-label">Kişi</div>
+    <div class="menu-item" data-q="tcgsm"><div class="ico">📱</div> TC → GSM</div>
+    <div class="menu-item" data-q="gsmtc"><div class="ico">📞</div> GSM → TC <span class="badge">PREMIUM</span></div>
+    <div class="menu-item" data-q="adres"><div class="ico">📍</div> Adres Sorgulama <span class="badge">PREMIUM</span></div>
+
+    <div class="menu-divider"></div>
+    <div class="menu-label">Eğitim</div>
+    <div class="menu-item" data-q="eokul"><div class="ico">🎓</div> E-Okul Sorgulama <span class="badge">PREMIUM</span></div>
+
+    <div class="menu-divider"></div>
+    <div class="menu-label">Hesap</div>
+    <div class="menu-item" id="drawerSettings"><div class="ico">⚙️</div> Ayarlar</div>
+    <div class="menu-item hidden" id="drawerAdmin"><div class="ico">🛡️</div> Admin Paneli</div>
+    <div class="menu-item hidden" id="drawerHistory"><div class="ico">📜</div> Sorgu Geçmişi</div>
+    <div class="menu-item danger" id="drawerLogout"><div class="ico">⏻</div> Güvenli Çıkış</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <h3><span class="hl">🔑 Giriş Yap</span></h3>
+    <input id="loginUser" placeholder="Kullanıcı adı" autocomplete="off">
+    <input id="loginPass" type="password" placeholder="Şifre">
+    <button class="primary" id="loginBtn">Giriş</button>
+    <div class="switch">Hesabın yok mu? <span id="goRegister">Kaydol</span></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="registerModal">
+  <div class="modal">
+    <h3><span class="hl">📝 Kaydol</span></h3>
+    <input id="regUser" placeholder="Kullanıcı adı" autocomplete="off">
+    <input id="regPass" type="password" placeholder="Şifre">
+    <input id="regPass2" type="password" placeholder="Şifre (tekrar)">
+    <button class="primary" id="registerBtn">Kaydol</button>
+    <div class="switch">Zaten hesabın var mı? <span id="goLogin">Giriş</span></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="queryModal">
+  <div class="modal query-modal">
+    <div class="qhead">
+      <div class="qico" id="qIco">🔎</div>
+      <div>
+        <h3 id="qTitle">Sorgu</h3>
+        <div class="qsub" id="qSub">Bilgi gir ve sorgula</div>
+      </div>
+      <div class="qclose" id="qClose">✕</div>
+    </div>
+    <input id="qInput1" placeholder="Değer gir" autocomplete="off">
+    <input id="qInput2" placeholder="İkinci alan" style="display:none;" autocomplete="off">
+    <button class="primary" id="qBtn">Sorgula</button>
+    <div class="q-status" id="qStatus"></div>
+    <div class="q-result" id="qResult"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h3><span class="hl">⚙️ Ayarlar</span></h3>
+    <div class="ipinfo" id="settingsInfo"></div>
+    <button class="primary btn-green hidden" id="openTerminal">💻 Kurucu Terminali</button>
+    <button class="btn-secondary" id="settingsClose">Kapat</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="terminalModal">
+  <div class="modal" style="max-width:560px;">
+    <h3><span class="hl">💻 Kurucu Terminali</span></h3>
+    <div class="terminal" id="termOut"></div>
+    <input id="termIn" placeholder="/pre user 30g | /vip user 6a | /ban user | /ipban IP | /users | help">
+    <button class="btn-secondary" id="termClose">Kapat</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adminModal">
+  <div class="modal" style="max-width:680px;">
+    <h3><span class="hl">🛡️ Admin Paneli — Ziyaretçi Logları</span></h3>
+    <div class="terminal" id="adminOut" style="color:#c4b5fd;"></div>
+    <button class="btn-secondary btn-red" id="adminClear">🗑️ Logları Temizle</button>
+    <button class="btn-secondary" id="adminClose">Kapat</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="historyModal">
+  <div class="modal" style="max-width:680px;">
+    <h3><span class="hl">📜 Sorgu Geçmişi</span></h3>
+    <div class="terminal" id="historyOut" style="color:#7dd3fc;"></div>
+    <button class="btn-secondary btn-red" id="historyClear">🗑️ Geçmişi Temizle</button>
+    <button class="btn-secondary" id="historyClose">Kapat</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<audio id="bgMusic" loop preload="auto" playsinline>
+  <source src="yalama.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+/* ============================================================
+   SABİTLER
+============================================================ */
+const API = 'https://apiv2.ajaxsystems.fun/';
+const PROXY_LOCAL = 'proxy.php?url=';
+const WORKER_URL = 'https://vantorium-proxy.bubabxba.workers.dev/?url=';
+const LOG_ENDPOINT = 'log.php';
+const USERS_ENDPOINT = 'users.php';
+const PLAKA_ENDPOINT = 'plaka.php';
+const IBAN_ENDPOINT = 'iban.php';
+const IPSORGU_ENDPOINT = 'ipsorgu.php';
+const SESSION_KEY = 'vantorium_session';
+const PREMIUM_QUERIES = ['tcpro','tapu','adaparsel','plaka','adsoyad2','eokul','adres','gsmtc','iban','ipsorgu'];
+const PREMIUM_ROLES = ['premium','vip','kurucu','admin'];
+
+const QUERY_INFO = {
+  tc:       { ico:'🔎', title:'TC Sorgulama',        sub:'TC kimlik numarası ile sorgula',       ph1:'TC Kimlik No',     ph2:'' },
+  tcpro:    { ico:'⭐', title:'TC Pro Sorgulama',    sub:'Detaylı TC sorgusu (PREMIUM)',         ph1:'TC Kimlik No',     ph2:'' },
+  adsoyad:  { ico:'👤', title:'Ad Soyad Sorgulama',  sub:'Ad ve soyad ile sorgula',              ph1:'Ad',               ph2:'Soyad' },
+  aile:     { ico:'👨‍👩‍👧', title:'Aile Sorgulama',     sub:'Aile bilgileri',                       ph1:'TC Kimlik No',     ph2:'' },
+  sulale:   { ico:'🌳', title:'Sülale Sorgulama',    sub:'Sülale bilgileri',                     ph1:'TC Kimlik No',     ph2:'' },
+  tapu:     { ico:'🏠', title:'Tapu Sorgulama',      sub:'Tapu kaydı (PREMIUM)',                 ph1:'TC Kimlik No',     ph2:'' },
+  adaparsel:{ ico:'🗺️', title:'Ada Parsel Sorgulama',sub:'İl ve ilçe ile sorgula (PREMIUM)',     ph1:'İl (örn: İSTANBUL)', ph2:'İlçe (örn: KADIKÖY)' },
+  tcgsm:    { ico:'📱', title:'TC → GSM',            sub:'TC ile GSM numarası bul',              ph1:'TC Kimlik No',     ph2:'' },
+  gsmtc:    { ico:'📞', title:'GSM → TC',            sub:'GSM ile TC bul (PREMIUM)',             ph1:'GSM (örn: 5550000000)', ph2:'' },
+  adres:    { ico:'📍', title:'Adres Sorgulama',     sub:'TC ile adres bul (PREMIUM)',           ph1:'TC Kimlik No',     ph2:'' },
+  eokul:    { ico:'🎓', title:'E-Okul Sorgulama',    sub:'TC ile e-okul bilgisi (PREMIUM)',      ph1:'TC Kimlik No',     ph2:'' },
+  plaka:    { ico:'🚗', title:'Plaka → Ad Soyad',   sub:'Plaka gir → ad soyad (PREMIUM)',       ph1:'Plaka (örn: 34ABC123)', ph2:'' },
+  adsoyad2: { ico:'👤', title:'Ad Soyad → Plaka',   sub:'Ad soyad gir → plaka (PREMIUM)',       ph1:'Ad Soyad',         ph2:'' },
+  iban:     { ico:'💳', title:'IBAN Sorgulama',     sub:'IBAN gir → banka bilgisi (PREMIUM)',   ph1:'TR00 0000 0000 0000 0000 0000 00', ph2:'' },
+  ipsorgu:  { ico:'🌐', title:'IP Sorgulama',       sub:'IP gir → konum ve ISP bilgisi (PREMIUM)', ph1:'1.1.1.1', ph2:'' }
+};
+
+/* ============================================================
+   YARDIMCILAR
+============================================================ */
+const $ = id => document.getElementById(id);
+const getSession = () => JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+const setSession = s => localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+const clearSession = () => localStorage.removeItem(SESSION_KEY);
+
+let toastTimer = null;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+/* ============================================================
+   CİHAZ BİLGİSİ
+============================================================ */
+function detectBrowser(){
+  const ua = navigator.userAgent;
+  if(ua.includes('Edg')) return 'Edge';
+  if(ua.includes('OPR')||ua.includes('Opera')) return 'Opera';
+  if(ua.includes('Chrome')) return 'Chrome';
+  if(ua.includes('Firefox')) return 'Firefox';
+  if(ua.includes('Safari')) return 'Safari';
+  return 'Bilinmiyor';
+}
+function detectOS(){
+  const ua = navigator.userAgent;
+  if(ua.includes('Windows')) return 'Windows';
+  if(ua.includes('Android')) return 'Android';
+  if(ua.includes('iPhone')||ua.includes('iPad')) return 'iOS';
+  if(ua.includes('Mac')) return 'macOS';
+  if(ua.includes('Linux')) return 'Linux';
+  return 'Bilinmiyor';
+}
+function detectDevice(){
+  const ua = navigator.userAgent;
+  if(/Mobile|Android|iPhone/.test(ua)) return 'Mobil';
+  if(/iPad|Tablet/.test(ua)) return 'Tablet';
+  return 'Masaüstü';
+}
+function buildDeviceParams(){
+  return {
+    browser: detectBrowser(), os: detectOS(), device: detectDevice(),
+    platform: navigator.platform || '-', dil: navigator.language || '-',
+    ekran: screen.width+'x'+screen.height,
+    cpu: navigator.hardwareConcurrency ? navigator.hardwareConcurrency+' çekirdek' : '-',
+    ram: navigator.deviceMemory ? navigator.deviceMemory+' GB' : '-'
+  };
+}
+function sendLog(action, username){
+  try {
+    const d = buildDeviceParams();
+    const params = new URLSearchParams({ action:'log', act:action, user:username||'-', ...d });
+    fetch(LOG_ENDPOINT + '?' + params.toString(), { mode:'no-cors' }).catch(()=>{});
+  } catch(e){}
+}
+function sendQueryLog(type, value, username){
+  try {
+    const params = new URLSearchParams({ action:'qlog', type, value, user:username||'-' });
+    fetch(LOG_ENDPOINT + '?' + params.toString(), { mode:'no-cors' }).catch(()=>{});
+  } catch(e){}
+}
+
+/* ============================================================
+   IP BAN KONTROLÜ — sayfa açılışında
+============================================================ */
+(async function checkBan(){
+  try {
+    const r = await fetch(USERS_ENDPOINT + '?action=me');
+    const data = await r.json();
+    if(data && data.success === false && data.error === 'IP_BANNED'){
+      showBanScreen(data.ip || '');
+      return;
+    }
+    sendLog('siteye_giris', '-');
+  } catch(e){
+    console.log('Ban check fail:', e);
+  }
+})();
+
+function showBanScreen(ip){
+  const el = $('banScreen');
+  const info = $('banInfo');
+  if(info){
+    info.innerHTML =
+      'IP adresiniz kara listeye alınmıştır.<br>' +
+      'Bu siteye bir daha erişemezsiniz.<br><br>' +
+      '<span style="color:#ff0033;">' + (ip||'') + '</span>';
+  }
+  if(el){
+    el.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  document.querySelectorAll('.topbar, .drawer, .drawer-overlay, .modal-overlay, .sound-btn, .empty-home').forEach(x => {
+    x.style.display = 'none';
+  });
+}
+
+/* ============================================================
+   PROXY FETCH
+============================================================ */
+const FALLBACK_PROXIES = [
+  { name:'worker',     fn: u => WORKER_URL + u },
+  { name:'local',      fn: u => PROXY_LOCAL + encodeURIComponent(u) },
+  { name:'codetabs',   fn: u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u) },
+  { name:'allorigins', fn: u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u) }
+];
+async function proxiedFetch(targetURL){
+  let lastErr = null;
+  for(const p of FALLBACK_PROXIES){
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(()=>controller.abort(), 40000);
+      const r = await fetch(p.fn(targetURL), { signal: controller.signal });
+      clearTimeout(timeout);
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const text = await r.text();
+      if(!text || text.length < 2) throw new Error('Boş yanıt');
+      return { text, proxy: p.name };
+    } catch(err){ lastErr = err; continue; }
+  }
+  throw lastErr;
+}
+
+/* ============================================================
+   MÜZİK
+============================================================ */
+const music = $('bgMusic');
+music.volume = 0.4; music.loop = true;
+function attemptPlay(){
+  const p = music.play();
+  if(p && p.then) p.then(()=>$('soundBtn').classList.add('playing')).catch(()=>{});
+}
+$('soundBtn').onclick = (e) => {
+  e.stopPropagation();
+  if(music.paused){
+    music.play().then(()=>$('soundBtn').classList.add('playing')).catch(()=>toast('Ses çalınamadı'));
+  } else { music.pause(); $('soundBtn').classList.remove('playing'); }
+};
+function firstInteraction(){
+  attemptPlay();
+  document.removeEventListener('click', firstInteraction);
+  document.removeEventListener('touchstart', firstInteraction);
+}
+document.addEventListener('click', firstInteraction);
+document.addEventListener('touchstart', firstInteraction);
+window.addEventListener('load', () => { attemptPlay(); setTimeout(attemptPlay, 500); });
+
+/* ============================================================
+   MENÜ
+============================================================ */
+const drawer = $('drawer');
+const drawerOverlay = $('drawerOverlay');
+function openDrawer(){ drawer.classList.add('open'); drawerOverlay.classList.add('open'); }
+function closeDrawer(){ drawer.classList.remove('open'); drawerOverlay.classList.remove('open'); }
+$('dotsBtn').onclick = (e) => { e.stopPropagation(); openDrawer(); };
+$('drawerClose').onclick = closeDrawer;
+drawerOverlay.onclick = closeDrawer;
+
+/* ============================================================
+   MODAL
+============================================================ */
+function openModal(id){ $(id).classList.add('open'); }
+function closeModal(id){ $(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if(e.target === m) m.classList.remove('open'); });
+});
+
+/* ============================================================
+   GİRİŞ / KAYIT
+============================================================ */
+$('drawerLogin').onclick = () => { closeDrawer(); openModal('loginModal'); };
+$('drawerRegister').onclick = () => { closeDrawer(); openModal('registerModal'); };
+$('goRegister').onclick = () => { closeModal('loginModal'); openModal('registerModal'); };
+$('goLogin').onclick = () => { closeModal('registerModal'); openModal('loginModal'); };
+
+$('loginBtn').onclick = async () => {
+  const u = $('loginUser').value.trim();
+  const p = $('loginPass').value;
+  if(!u || !p){ toast('Boş bırakma!'); return; }
+  try {
+    const r = await fetch(USERS_ENDPOINT + '?action=login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user:u, pass:p})
+    });
+    const data = await r.json();
+    if(data.error === 'IP_BANNED'){ showBanScreen(''); return; }
+    if(!data.success){ toast(data.error || 'Giriş başarısız'); return; }
+    setSession({ user:data.user, role:data.role });
+    sendLog('giris_yapti', u);
+    closeModal('loginModal');
+    $('loginUser').value=''; $('loginPass').value='';
+    refreshUI();
+    attemptPlay();
+    toast('Giriş başarılı, hoş geldin ' + u);
+  } catch(e){ toast('Sunucu hatası: ' + e.message); }
+};
+
+$('registerBtn').onclick = async () => {
+  const u = $('regUser').value.trim();
+  const p = $('regPass').value;
+  const p2 = $('regPass2').value;
+  if(!u || !p){ toast('Boş bırakma!'); return; }
+  if(u.length < 3){ toast('Kullanıcı adı en az 3 karakter!'); return; }
+  if(p.length < 4){ toast('Şifre en az 4 karakter!'); return; }
+  if(p !== p2){ toast('Şifreler uyuşmuyor!'); return; }
+  try {
+    const r = await fetch(USERS_ENDPOINT + '?action=register', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user:u, pass:p})
+    });
+    const data = await r.json();
+    if(data.error === 'IP_BANNED'){ showBanScreen(''); return; }
+    if(!data.success){ toast(data.error || 'Kayıt başarısız'); return; }
+    setSession({ user:data.user, role:data.role });
+    sendLog('kaydoldu', u);
+    closeModal('registerModal');
+    $('regUser').value=''; $('regPass').value=''; $('regPass2').value='';
+    refreshUI();
+    attemptPlay();
+    toast('Kayıt başarılı! Hoş geldin ' + u);
+  } catch(e){ toast('Sunucu hatası: ' + e.message); }
+};
+
+/* ============================================================
+   UI YENİLE
+============================================================ */
+function refreshUI(){
+  const s = getSession();
+  const logged = !!s;
+  $('guestMenu').classList.toggle('hidden', logged);
+  $('memberMenu').classList.toggle('hidden', !logged);
+  const isAdmin = logged && (s.role==='admin'||s.role==='kurucu');
+  $('drawerAdmin').classList.toggle('hidden', !isAdmin);
+  $('drawerHistory').classList.toggle('hidden', !isAdmin);
+  updateLocks();
+}
+
+/* ============================================================
+   SORGU PANELİ
+============================================================ */
+let currentQ = null;
+function openQueryPanel(q){
+  const s = getSession();
+  if(!s){
+    toast('Önce giriş yap veya kaydol!');
+    closeDrawer(); openModal('loginModal'); return;
+  }
+  if(PREMIUM_QUERIES.includes(q) && !PREMIUM_ROLES.includes(s.role)){
+    toast('Bu sorgu sadece PREMIUM, VIP, ADMIN ve KURUCU için!');
+    return;
+  }
+  currentQ = q;
+  const info = QUERY_INFO[q];
+  $('qIco').textContent = info.ico;
+  $('qTitle').textContent = info.title;
+  $('qSub').textContent = info.sub;
+  $('qInput1').placeholder = info.ph1;
+  $('qInput1').value = '';
+  if(info.ph2){
+    $('qInput2').style.display='block';
+    $('qInput2').placeholder=info.ph2;
+    $('qInput2').value='';
+  } else {
+    $('qInput2').style.display='none';
+    $('qInput2').value='';
+  }
+  $('qStatus').textContent='';
+  $('qResult').textContent='';
+  $('qResult').classList.remove('show');
+  closeDrawer();
+  openModal('queryModal');
+  setTimeout(()=>$('qInput1').focus(), 200);
+}
+$('qClose').onclick = () => closeModal('queryModal');
+document.querySelectorAll('.menu-item[data-q]').forEach(el => {
+  el.onclick = () => openQueryPanel(el.dataset.q);
+});
+
+/* ============================================================
+   SORGU
+============================================================ */
+function buildURL(type, v1, v2){
+  const e = encodeURIComponent;
+  switch(type){
+    case 'tc':       return API+'tc.php?tc='+e(v1);
+    case 'tcpro':    return API+'tcpro.php?tc='+e(v1);
+    case 'adsoyad':  return API+'adsoyad.php?ad='+e(v1)+'&soyad='+e(v2);
+    case 'aile':     return API+'aile.php?tc='+e(v1);
+    case 'sulale':   return API+'sulale.php?tc='+e(v1);
+    case 'tcgsm':    return API+'tcgsm.php?tc='+e(v1);
+    case 'gsmtc':    return API+'gsmtc.php?gsm='+e(v1)+'&auth=fire';
+    case 'eokul':    return API+'eokul.php?tc='+e(v1);
+    case 'adres':    return API+'adres.php?tc='+e(v1);
+    case 'tapu':     return API+'tapu.php?tc='+e(v1);
+    case 'adaparsel':return API+'adaparsel.php?il='+e(v1)+'&ilce='+e(v2);
+  }
+  return '';
+}
+
+async function doQuery(){
+  if(!currentQ) return;
+  const v1 = $('qInput1').value.trim();
+  const v2 = $('qInput2').value.trim();
+  const info = QUERY_INFO[currentQ];
+  if(!v1){ $('qStatus').textContent='Değer gir!'; return; }
+  if(info.ph2 && !v2){ $('qStatus').textContent='İkinci alanı da doldur!'; return; }
+
+  $('qBtn').disabled = true;
+  $('qStatus').textContent = 'Sorgulanıyor...';
+  $('qResult').textContent = '';
+  $('qResult').classList.add('show');
+
+  const s = getSession();
+  const queryVal = info.ph2 ? (v1 + ' ' + v2) : v1;
+
+  try {
+    if(currentQ === 'plaka'){
+      const r = await fetch(PLAKA_ENDPOINT + '?q=' + encodeURIComponent(v1) + '&mode=plaka');
+      const data = await r.json();
+      if(data.success && data.kayitlar){
+        let html = '<div style="color:#22d3ee;margin-bottom:14px;font-weight:700;font-size:14px;">🚗 ' + data.toplam + ' kayıt — "'+v1+'"</div>';
+        data.kayitlar.forEach(k => {
+          html += '<div class="plk-card">';
+          html += '<div class="plk-row"><span class="lbl">🚗 Plaka:</span><span class="val plaka">'+k.plaka+'</span></div>';
+          html += '<div class="plk-row"><span class="lbl">👤 Ad Soyad:</span><span class="val">'+k.isim+'</span></div>';
+          html += '</div>';
+        });
+        $('qResult').innerHTML = html;
+      } else {
+        $('qResult').innerHTML = '<span class="error">✖ ' + (data.error || 'Kayıt bulunamadı') + '</span>';
+      }
+    }
+    else if(currentQ === 'adsoyad2'){
+      const r = await fetch(PLAKA_ENDPOINT + '?q=' + encodeURIComponent(v1) + '&mode=adsoyad');
+      const data = await r.json();
+      if(data.success && data.kayitlar){
+        let html = '<div style="color:#22d3ee;margin-bottom:14px;font-weight:700;font-size:14px;">🚗 ' + data.toplam + ' kayıt — "'+v1+'"</div>';
+        data.kayitlar.forEach(k => {
+          html += '<div class="plk-card">';
+          html += '<div class="plk-row"><span class="lbl">👤 Ad Soyad:</span><span class="val">'+k.isim+'</span></div>';
+          html += '<div class="plk-row"><span class="lbl">🚗 Plaka:</span><span class="val plaka">'+k.plaka+'</span></div>';
+          html += '</div>';
+        });
+        $('qResult').innerHTML = html;
+      } else {
+        $('qResult').innerHTML = '<span class="error">✖ ' + (data.error || 'Kayıt bulunamadı') + '</span>';
+      }
+    }
+    else if(currentQ === 'iban'){
+      const r = await fetch(IBAN_ENDPOINT + '?iban=' + encodeURIComponent(v1));
+      const data = await r.json();
+      if(data.success){
+        let html = '<div class="ip-kart">';
+        html += '<div class="ip-row"><span class="lbl">💳 IBAN:</span><span class="val" style="color:#22d3ee;">'+data.iban+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">🏦 Banka:</span><span class="val" style="color:#a78bfa;font-weight:700;">'+data.banka+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">🔢 Banka Kodu:</span><span class="val">'+data.banka_kodu+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">📄 Hesap No:</span><span class="val">'+data.hesap_no+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">🌍 Ülke:</span><span class="val">'+data.ulke+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">✅ Doğrulama:</span><span class="val" style="color:#22ff88;">Geçerli</span></div>';
+        html += '</div>';
+        $('qResult').innerHTML = html;
+      } else {
+        $('qResult').innerHTML = '<span class="error">✖ ' + (data.error || 'Hata') + '</span>';
+      }
+    }
+    else if(currentQ === 'ipsorgu'){
+      const r = await fetch(IPSORGU_ENDPOINT + '?ip=' + encodeURIComponent(v1));
+      const data = await r.json();
+      if(data.success){
+        let html = '<div class="ip-kart">';
+        html += '<div class="ip-row"><span class="lbl">🌐 IP:</span><span class="val" style="color:#22d3ee;">'+data.ip+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">🏳️ Ülke:</span><span class="val">'+data.ulke+' ('+data.ulke_kodu+')</span></div>';
+        html += '<div class="ip-row"><span class="lbl">📍 Bölge:</span><span class="val">'+data.bolge+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">🏙️ Şehir:</span><span class="val">'+data.sehir+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">📮 Posta:</span><span class="val">'+data.posta+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">📐 Koordinat:</span><span class="val">'+data.enlem+', '+data.boylam+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">🕐 Saat Dilimi:</span><span class="val">'+data.timezone+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">📡 ISP:</span><span class="val">'+data.isp+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">🏢 Org:</span><span class="val">'+data.org+'</span></div>';
+        html += '<div class="ip-row"><span class="lbl">🔢 AS:</span><span class="val">'+data.as+'</span></div>';
+        html += '<div style="margin-top:10px;border-radius:10px;overflow:hidden;">';
+        html += '<iframe width="100%" height="220" frameborder="0" style="border:0;border-radius:10px;" src="https://www.google.com/maps?q='+data.enlem+','+data.boylam+'&z=10&output=embed"></iframe>';
+        html += '</div>';
+        html += '</div>';
+        $('qResult').innerHTML = html;
+      } else {
+        $('qResult').innerHTML = '<span class="error">✖ ' + (data.error || 'Hata') + '</span>';
+      }
+    }
+    else {
+      const targetURL = buildURL(currentQ, v1, v2);
+      const res = await proxiedFetch(targetURL);
+      try {
+        const data = JSON.parse(res.text);
+        $('qResult').textContent = JSON.stringify(data, null, 2);
+      } catch(e){ $('qResult').textContent = res.text; }
+    }
+    $('qStatus').textContent = 'Tamamlandı';
+    sendQueryLog(currentQ, queryVal, s.user);
+  } catch(e){
+    $('qResult').innerHTML = '<span class="error">Hata: ' + e.message + '</span>';
+    $('qStatus').textContent = 'Hata';
+  } finally {
+    $('qBtn').disabled = false;
+  }
+}
+$('qBtn').onclick = doQuery;
+$('qInput1').addEventListener('keydown', e => { if(e.key==='Enter') doQuery(); });
+$('qInput2').addEventListener('keydown', e => { if(e.key==='Enter') doQuery(); });
+
+/* ============================================================
+   AYARLAR
+============================================================ */
+$('drawerSettings').onclick = () => {
+  closeDrawer();
+  const s = getSession();
+  const info = {
+    browser: detectBrowser(), os: detectOS(), device: detectDevice(),
+    platform: navigator.platform || '-', dil: navigator.language || '-',
+    ekran: screen.width+'x'+screen.height, renk: screen.colorDepth+'bit',
+    cpu: navigator.hardwareConcurrency ? navigator.hardwareConcurrency+' çekirdek' : '-',
+    ram: navigator.deviceMemory ? navigator.deviceMemory+' GB' : '-'
+  };
+  $('settingsInfo').innerHTML =
+    `<b>Kullanıcı:</b> ${s.user}<br><b>Rol:</b> ${s.role}<hr>
+     <b>Tarayıcı:</b> ${info.browser}<br><b>İşletim Sistemi:</b> ${info.os}<br>
+     <b>Cihaz:</b> ${info.device}<br><b>Platform:</b> ${info.platform}<br>
+     <b>Dil:</b> ${info.dil}<br><b>Ekran:</b> ${info.ekran} / ${info.renk}<br>
+     <b>CPU:</b> ${info.cpu}<br><b>RAM:</b> ${info.ram}`;
+  $('openTerminal').classList.toggle('hidden', s.role !== 'kurucu');
+  openModal('settingsModal');
+};
+$('settingsClose').onclick = () => closeModal('settingsModal');
+
+/* ============================================================
+   ÇIKIŞ
+============================================================ */
+$('drawerLogout').onclick = () => {
+  if(!confirm('Çıkış yapmak istediğine emin misin?')) return;
+  clearSession();
+  closeDrawer();
+  refreshUI();
+  toast('Çıkış yapıldı.');
+};
+
+/* ============================================================
+   KURUCU TERMİNALİ
+============================================================ */
+const termOut = $('termOut');
+const termIn = $('termIn');
+function termWrite(t){ termOut.innerHTML += t + '<br>'; termOut.scrollTop = termOut.scrollHeight; }
+$('openTerminal').onclick = () => {
+  termOut.innerHTML = '';
+  termWrite('VANTORIUM KURUCU TERMİNALİ v2.0');
+  termWrite('Komutlar: /pre, /vip, /admin, /ban, /unban, /ipban, /unipban, /users, list, clear');
+  termWrite('');
+  termWrite('Süre formatı: 30g (gün), 6a (ay), 1y (yıl), 4h (hafta)');
+  termWrite('Örnek: /pre ali 30g | /vip mehmet 6a | /admin zeynep 1y');
+  termWrite('');
+  closeModal('settingsModal');
+  openModal('terminalModal');
+  setTimeout(()=>termIn.focus(), 200);
+};
+$('termClose').onclick = () => closeModal('terminalModal');
+
+termIn.addEventListener('keydown', async e => {
+  if(e.key !== 'Enter') return;
+  const cmd = termIn.value.trim();
+  termIn.value = '';
+  if(!cmd) return;
+  termWrite('<span style="color:#f472b6;">> '+cmd+'</span>');
+
+  const parts = cmd.split(/\s+/);
+  const c = parts[0].toLowerCase();
+  const t = parts[1];
+
+  async function post(action, body){
+    try {
+      const r = await fetch(USERS_ENDPOINT + '?action=' + action, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      return await r.json();
+    } catch(err){ return { success:false, error: err.message }; }
+  }
+
+  /* ROL KOMUTLARI — süreli/süresiz */
+  if(c==='/pre' || c==='/vip' || c==='/admin'){
+    if(!t){ termWrite('Kullanıcı adı gir! Örn: /pre ali 30g'); return; }
+    const duration = parts[2] || '';
+    const data = await post('role', {user:t, role:c.slice(1), duration:duration});
+    if(data.success){
+      let extra = '';
+      if(data.expires){
+        const d = new Date(data.expires * 1000);
+        const dd = String(d.getDate()).padStart(2,'0');
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const yy = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mi = String(d.getMinutes()).padStart(2,'0');
+        extra = ' <span style="color:#9a9ac0;">('+data.duration+' → '+dd+'.'+mm+'.'+yy+' '+hh+':'+mi+')</span>';
+      } else {
+        extra = ' <span style="color:#9a9ac0;">(süresiz)</span>';
+      }
+      termWrite('<span style="color:#22ff88;">'+t+' → rol: '+data.role+'</span>'+extra);
+    } else {
+      termWrite('<span style="color:#f87171;">✖ '+(data.error||'hata')+'</span>');
+    }
+  }
+
+  /* BAN */
+  else if(c==='/ban'){
+    if(!t){ termWrite('Kullanıcı adı gir!'); return; }
+    const data = await post('ban', {user:t});
+    if(data.success) termWrite('<span style="color:#f87171;">🚫 '+t+' yasaklandı.</span>');
+    else termWrite('<span style="color:#f87171;">✖ '+(data.error||'hata')+'</span>');
+  }
+
+  /* UNBAN */
+  else if(c==='/unban'){
+    if(!t){ termWrite('Kullanıcı adı gir!'); return; }
+    const data = await post('unban', {user:t});
+    if(data.success) termWrite('<span style="color:#22ff88;">✔ '+t+' yasağı kaldırıldı.</span>');
+    else termWrite('<span style="color:#f87171;">✖ '+(data.error||'hata')+'</span>');
+  }
+
+  /* IPBAN */
+  else if(c==='/ipban'){
+    if(!t){ termWrite('IP gir!'); return; }
+    const data = await post('ipban', {ip:t});
+    if(data.success) termWrite('<span style="color:#f87171;">🚫 IP '+t+' kalıcı olarak yasaklandı.</span>');
+    else termWrite('<span style="color:#f87171;">✖ '+(data.error||'hata')+'</span>');
+  }
+
+  /* UNIPBAN */
+  else if(c==='/unipban'){
+    if(!t){ termWrite('IP gir!'); return; }
+    const data = await post('unipban', {ip:t});
+    if(data.success) termWrite('<span style="color:#22ff88;">✔ '+t+' IP yasağı kaldırıldı.</span>');
+    else termWrite('<span style="color:#f87171;">✖ '+(data.error||'hata')+'</span>');
+  }
+
+  /* LİSTE */
+  else if(c==='/users' || c==='list'){
+    try {
+      const r = await fetch(USERS_ENDPOINT + '?action=list');
+      const data = await r.json();
+      if(!data.success){ termWrite('✖ Liste alınamadı'); return; }
+      termWrite('Toplam '+data.total+' kullanıcı:');
+      data.users.forEach(u => {
+        const r = u.role;
+        const color = r==='kurucu'?'#fbbf24': r==='admin'?'#f472b6': r==='vip'?'#a78bfa': r==='premium'?'#22d3ee':'#9ca3af';
+        let expireTxt = '';
+        if(u.expires){
+          const d = new Date(u.expires * 1000);
+          const dd = String(d.getDate()).padStart(2,'0');
+          const mm = String(d.getMonth()+1).padStart(2,'0');
+          const yy = d.getFullYear();
+          const hh = String(d.getHours()).padStart(2,'0');
+          const mi = String(d.getMinutes()).padStart(2,'0');
+          expireTxt = ' <span style="color:#fbbf24;font-size:10px;">⏳ '+dd+'.'+mm+'.'+yy+' '+hh+':'+mi+'</span>';
+        }
+        termWrite('  • '+u.user+' <span style="color:'+color+';">['+r+']</span>'+expireTxt+' <span style="color:#6b6b90;font-size:10px;">IP: '+u.ip+'</span>');
+      });
+      if(data.bans.length){
+        termWrite('');
+        termWrite('<span style="color:#f87171;">Yasaklı kullanıcılar ('+data.bans.length+'):</span>');
+        data.bans.forEach(b => termWrite('  🚫 '+b));
+      }
+      if(data.ipbans.length){
+        termWrite('');
+        termWrite('<span style="color:#f87171;">Yasaklı IP\'ler ('+data.ipbans.length+'):</span>');
+        data.ipbans.forEach(b => termWrite('  🚫 '+b));
+      }
+    } catch(err){ termWrite('✖ '+err.message); }
+  }
+
+  /* CLEAR */
+  else if(c==='clear'){ termOut.innerHTML=''; }
+
+  /* HELP */
+  else if(c==='help'){
+    termWrite('<b>Rol Komutları (süreli):</b>');
+    termWrite('/pre &lt;user&gt; &lt;süre&gt; — premium');
+    termWrite('/vip &lt;user&gt; &lt;süre&gt; — vip');
+    termWrite('/admin &lt;user&gt; &lt;süre&gt; — admin');
+    termWrite('');
+    termWrite('<b>Süre Formatı:</b>');
+    termWrite('  30g → 30 gün');
+    termWrite('  6a → 6 ay');
+    termWrite('  1y → 1 yıl');
+    termWrite('  4h → 4 hafta');
+    termWrite('  (boş) → süresiz');
+    termWrite('');
+    termWrite('<b>Ban Komutları:</b>');
+    termWrite('/ban &lt;user&gt; — banla');
+    termWrite('/unban &lt;user&gt; — banı kaldır');
+    termWrite('/ipban &lt;ip&gt; — IP banla');
+    termWrite('/unipban &lt;ip&gt; — IP banı kaldır');
+    termWrite('');
+    termWrite('<b>Listele:</b> /users');
+    termWrite('<b>Temizle:</b> clear');
+  }
+  else { termWrite('Bilinmeyen komut: '+parts[0]); }
+});
+
+/* ============================================================
+   ADMİN PANEL
+============================================================ */
+$('drawerAdmin').onclick = async () => {
+  closeDrawer();
+  const out = $('adminOut');
+  out.textContent = 'Yükleniyor...';
+  openModal('adminModal');
+  try {
+    const r = await fetch(LOG_ENDPOINT + '?action=get');
+    const logs = await r.json();
+    if(!logs.length){ out.textContent = 'Kayıt yok.'; }
+    else {
+      out.innerHTML = logs.map((l,i) =>
+        `<div style="margin-bottom:12px;border-bottom:1px solid #333;padding-bottom:10px;">
+          <b style="color:#f472b6;">#${i+1} — ${l.action} ${l.user !== '-' ? '('+l.user+')' : ''}</b><br>
+          <b>IP:</b> ${l.ip} | <b>ISP:</b> ${l.isp}<br>
+          <b>Ülke:</b> ${l.ulke} | <b>Şehir:</b> ${l.sehir} | <b>Zip:</b> ${l.zip}<br>
+          <b>Koor:</b> ${l.lat}, ${l.lon}<br>
+          <b>Tarayıcı:</b> ${l.browser} | <b>OS:</b> ${l.os} | <b>Cihaz:</b> ${l.device}<br>
+          <b>Platform:</b> ${l.platform} | <b>Dil:</b> ${l.dil}<br>
+          <b>Ekran:</b> ${l.ekran} | <b>CPU:</b> ${l.cpu} | <b>RAM:</b> ${l.ram}<br>
+          <b>Zaman:</b> ${l.zaman}
+        </div>`
+      ).join('');
+    }
+  } catch(e){ out.innerHTML = 'Log alınamadı: '+e.message; }
+};
+$('adminClose').onclick = () => closeModal('adminModal');
+$('adminClear').onclick = async () => {
+  if(!confirm('Tüm logları sil?')) return;
+  await fetch(LOG_ENDPOINT + '?action=clear');
+  $('adminOut').textContent = 'Temizlendi.';
+  toast('Loglar temizlendi.');
+};
+
+/* ============================================================
+   SORGU GEÇMİŞİ
+============================================================ */
+$('drawerHistory').onclick = async () => {
+  closeDrawer();
+  const out = $('historyOut');
+  out.textContent = 'Yükleniyor...';
+  openModal('historyModal');
+  try {
+    const r = await fetch(LOG_ENDPOINT + '?action=qget');
+    const qs = await r.json();
+    if(!qs.length){ out.textContent = 'Sorgu kaydı yok.'; }
+    else {
+      out.innerHTML = qs.map((q,i) =>
+        `<div style="margin-bottom:10px;border-bottom:1px solid rgba(125,211,252,0.2);padding-bottom:10px;">
+          <b>#${i+1}</b> <span style="color:#22d3ee;">${q.user}</span> → <b>${q.type}</b> = <span style="color:#fbbf24;">${q.value}</span><br>
+          <b>IP:</b> ${q.ip} | <b>Zaman:</b> ${q.zaman}
+        </div>`
+      ).join('');
+    }
+  } catch(e){ out.innerHTML = 'Geçmiş alınamadı: '+e.message; }
+};
+$('historyClose').onclick = () => closeModal('historyModal');
+$('historyClear').onclick = async () => {
+  if(!confirm('Geçmişi sil?')) return;
+  await fetch(LOG_ENDPOINT + '?action=qclear');
+  $('historyOut').textContent = 'Temizlendi.';
+  toast('Geçmiş temizlendi.');
+};
+
+/* ============================================================
+   KİLİT
+============================================================ */
+function updateLocks(){
+  const s = getSession();
+  const ok = s && PREMIUM_ROLES.includes(s.role);
+  document.querySelectorAll('.menu-item[data-q]').forEach(el => {
+    if(PREMIUM_QUERIES.includes(el.dataset.q)){
+      el.classList.toggle('locked', !ok);
+    }
+  });
+}
+
+refreshUI();
+window.addEventListener('load', () => {
+  if(!getSession()) setTimeout(()=>openModal('loginModal'), 500);
+});
+</script>
+</body>
+</html>
